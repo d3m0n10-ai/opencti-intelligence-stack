@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="slides-format" content="viewport">
+  <title>OpenCTI Hardcore</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style type="text/tailwindcss">
+    @theme {
+      --color-bg: #0a0a0a;
+      --color-bg-deep: #050505;
+      --color-surface: #101010;
+      --color-text: #eaffea;
+      --color-text-secondary: #b7d9b7;
+      --color-text-muted: #7fb07f;
+      --color-accent-1: #00ff41;
+      --color-accent-2: #ffa500;
+      --color-accent-3: #ff3b30;
+      --color-glass-bg: rgba(0,255,65,0.05);
+      --color-glass-border: rgba(0,255,65,0.14);
+      --color-vignette: rgba(0,0,0,0.42);
+      --font-display: 'JetBrains Mono', monospace;
+      --font-body: 'Inter', sans-serif;
+    }
+  </style>
+  <style>
+    :root { --color-bg: #0a0a0a; --color-text: #eaffea; --glow-color-rgb: 0,255,65; }
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { background: var(--color-bg); margin: 0; }
+    body { font-family: var(--font-body); color: var(--color-text); overflow: hidden; height: 100vh; width: 100vw; }
+    .deck { width: 100vw; height: 100vh; position: relative; }
+    .slide { position: absolute; inset: 0; background: var(--color-bg); display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transform: scale(0.96); transition: opacity .7s ease, transform .7s ease; pointer-events: none; overflow: hidden; }
+    .slide.active { opacity: 1; transform: scale(1); pointer-events: all; }
+    .slide > .content { position: relative; z-index: 2; width: 100%; max-width: 1160px; padding: clamp(1.5rem, 4vw, 4rem); }
+    .nav-controls { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 16px; z-index: 100; background: rgba(0,0,0,.55); backdrop-filter: blur(10px); padding: 10px 24px; border-radius: 999px; border: 1px solid rgba(0,255,65,.12); }
+    .nav-btn { width: 40px; height: 40px; border: none; background: rgba(0,255,65,.06); color: #00ff41; border-radius: 50%; font-size: 1.2rem; cursor: pointer; }
+    .slide-dots { display: flex; gap: 8px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(0,255,65,.18); cursor: pointer; transition: .3s; }
+    .dot.active { background: #00ff41; transform: scale(1.25); }
+    .slide-counter { font-size: .82rem; color: #7fb07f; min-width: 46px; text-align: center; }
+    .reveal { opacity: 0; transform: translateY(18px); }
+    .text-glow { text-shadow: 0 0 20px rgba(var(--glow-color-rgb), .45), 0 0 40px rgba(var(--glow-color-rgb), .15); }
+    .stat-glow { text-shadow: 0 0 24px rgba(var(--glow-color-rgb), .5), 0 0 52px rgba(var(--glow-color-rgb), .2); }
+    @keyframes float-slow { 0%{transform:translate(0,0) scale(1)} 25%{transform:translate(55px,-45px) scale(1.1)} 50%{transform:translate(-35px,35px) scale(.92)} 75%{transform:translate(45px,12px) scale(1.06)} 100%{transform:translate(0,0) scale(1)} }
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-14px)} }
+    .gradient-mesh { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+    .blob { position: absolute; border-radius: 50%; filter: blur(85px); animation: float-slow 14s ease-in-out infinite; }
+    .slide::before { content:''; position:absolute; inset:0; z-index:1; pointer-events:none; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E"); opacity:.05; mix-blend-mode:screen; }
+    .slide::after { content:''; position:absolute; inset:0; z-index:1; pointer-events:none; background: radial-gradient(ellipse at center, transparent 45%, var(--color-vignette) 100%); }
+    .terminal-card { background: rgba(3,18,3,.62); border: 1px solid rgba(0,255,65,.18); box-shadow: inset 0 0 0 1px rgba(0,255,65,.04), 0 0 30px rgba(0,255,65,.05); }
+    .terminal-line::before { content: '> '; color: #00ff41; }
+    .scan { position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(to bottom, transparent 0%, rgba(0,255,65,.03) 48%, rgba(0,255,65,.08) 50%, rgba(0,255,65,.03) 52%, transparent 100%); background-size: 100% 8px; opacity: .25; }
+    .bar-chart { display:flex; align-items:flex-end; gap:.75rem; height:190px; }
+    .bar-col { display:flex; flex-direction:column; align-items:center; gap:.35rem; flex:1; }
+    .bar { border-radius: 8px 8px 0 0; width:100%; }
+    .bar-fill { height: 16px; border-radius: 999px; }
+    .mouse-spotlight { position:fixed; inset:0; z-index:99; pointer-events:none; }
+    @media (prefers-reduced-motion: reduce){ *,*::before,*::after { animation-duration:.01ms !important; transition-duration:.2s !important; } }
+  </style>
+</head>
+<body>
+<div class="mouse-spotlight"></div>
+<div class="deck">
+  <section class="slide active" data-slide="1">
+    <div class="gradient-mesh">
+      <div class="blob" style="width:520px;height:520px;top:-120px;right:-80px;background:var(--color-accent-1);opacity:.16"></div>
+      <div class="blob" style="width:340px;height:340px;bottom:-80px;left:-40px;background:var(--color-accent-2);opacity:.10"></div>
+      <div class="blob" style="width:220px;height:220px;top:42%;left:16%;background:var(--color-accent-3);opacity:.08"></div>
+    </div>
+    <div class="scan"></div>
+    <div class="content text-center">
+      <div class="reveal text-[110px] mb-4 animate-[float_3.2s_ease-in-out_infinite]">🧠</div>
+      <h1 class="reveal font-display text-[clamp(2.3rem,5.8vw,4.8rem)] font-extrabold tracking-tight text-glow">OPENCTI // MODO HARDCORE</h1>
+      <p class="reveal mt-4 text-[clamp(.9rem,1.5vw,1.3rem)] uppercase tracking-[6px] text-text-muted">Threat intelligence graph · conectores · correlación · hunting</p>
+      <div class="reveal mt-10 inline-flex rounded-full border border-glass-border bg-glass-bg px-5 py-3 text-sm text-text-secondary">Lo que hemos levantado no es una demo: es una plataforma de inteligencia que ya impone respeto.</div>
+    </div>
+  </section>
+
+  <section class="slide" data-slide="2">
+    <div class="gradient-mesh">
+      <div class="blob" style="width:320px;height:320px;top:-70px;right:-50px;background:var(--color-accent-1);opacity:.08"></div>
+      <div class="blob" style="width:250px;height:250px;bottom:-60px;left:-30px;background:var(--color-accent-2);opacity:.06"></div>
+    </div>
+    <div class="content">
+      <p class="reveal uppercase tracking-[5px] text-text-muted mb-4">por qué esto es serio</p>
+      <h2 class="reveal font-display text-[clamp(2rem,4.2vw,3.3rem)] font-bold mb-8">No hemos montado una herramienta. Hemos montado un sistema.</h2>
+      <div class="grid grid-cols-2 gap-6">
+        <div class="reveal terminal-card rounded-2xl p-7">
+          <h3 class="font-display text-xl text-accent-1 mb-4">Qué es OpenCTI</h3>
+          <p class="text-text-secondary leading-7">OpenCTI es una plataforma open source para gestionar conocimiento e indicadores de inteligencia de amenazas, construida alrededor de un grafo de conocimiento y de una API GraphQL para operar datos, relaciones y flujos de CTI.</p>
+        </div>
+        <div class="reveal terminal-card rounded-2xl p-7">
+          <h3 class="font-display text-xl text-accent-2 mb-4">Por qué impone</h3>
+          <p class="text-text-secondary leading-7">La propia documentación la plantea como un stack con plataforma central, workers y conectores, apoyado en RabbitMQ, Elasticsearch, Redis y S3/MinIO; es decir, no es un visor, es una arquitectura de ingesta, correlación y producción de inteligencia.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" data-slide="3">
+    <div class="gradient-mesh">
+      <div class="blob" style="width:360px;height:360px;top:-100px;left:75%;background:var(--color-accent-1);opacity:.07"></div>
+      <div class="blob" style="width:260px;height:260px;bottom:-60px;left:-20px;background:var(--color-accent-3);opacity:.05"></div>
+    </div>
+    <div class="content">
+      <h2 class="reveal font-display text-[clamp(1.9rem,4vw,3rem)] font-bold mb-8">La bestia por dentro</h2>
+      <div class="grid grid-cols-3 gap-5">
+        <div class="reveal terminal-card rounded-2xl p-6"><div class="text-4xl mb-4">🖥️</div><h3 class="font-display text-lg mb-3 text-accent-1">Core Platform</h3><p class="text-sm leading-6 text-text-secondary">La UI y la API GraphQL viven aquí; es el punto central al que hablan conectores y operadores.</p></div>
+        <div class="reveal terminal-card rounded-2xl p-6"><div class="text-4xl mb-4">⚙️</div><h3 class="font-display text-lg mb-3 text-accent-2">Workers</h3><p class="text-sm leading-6 text-text-secondary">Los workers consumen mensajes de RabbitMQ para procesar escrituras asíncronas y escalar el rendimiento de ingesta.</p></div>
+        <div class="reveal terminal-card rounded-2xl p-6"><div class="text-4xl mb-4">🔌</div><h3 class="font-display text-lg mb-3 text-accent-3">Connectors</h3><p class="text-sm leading-6 text-text-secondary">Los conectores importan, enriquecen, exportan o consumen streams desde y hacia la plataforma.</p></div>
+        <div class="reveal terminal-card rounded-2xl p-6"><div class="text-4xl mb-4">🔎</div><h3 class="font-display text-lg mb-3 text-accent-1">Elasticsearch</h3><p class="text-sm leading-6 text-text-secondary">Hace de base principal de búsqueda y persistencia del conocimiento del stack OpenCTI.</p></div>
+        <div class="reveal terminal-card rounded-2xl p-6"><div class="text-4xl mb-4">🧵</div><h3 class="font-display text-lg mb-3 text-accent-2">Redis + RabbitMQ</h3><p class="text-sm leading-6 text-text-secondary">Redis gestiona sesiones y flujos de eventos; RabbitMQ articula la mensajería entre componentes y conectores.</p></div>
+        <div class="reveal terminal-card rounded-2xl p-6"><div class="text-4xl mb-4">📦</div><h3 class="font-display text-lg mb-3 text-accent-3">MinIO / S3</h3><p class="text-sm leading-6 text-text-secondary">MinIO almacena ficheros y artefactos crudos como informes o adjuntos procesados por la plataforma.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" data-slide="4">
+    <div class="gradient-mesh">
+      <div class="blob" style="width:300px;height:300px;top:-60px;right:-40px;background:var(--color-accent-2);opacity:.07"></div>
+      <div class="blob" style="width:240px;height:240px;bottom:-40px;left:-40px;background:var(--color-accent-1);opacity:.06"></div>
+    </div>
+    <div class="content">
+      <h2 class="reveal font-display text-[clamp(1.9rem,4vw,3rem)] font-bold mb-6">Lo que ya dice la infraestructura</h2>
+      <div class="grid grid-cols-4 gap-5 mb-8">
+        <div class="reveal terminal-card rounded-2xl p-6 text-center"><div class="text-4xl stat-glow font-display" data-count="8">8</div><div class="mt-2 text-xs uppercase tracking-[3px] text-text-muted">GB mínimos para OpenCTI Core</div><div class="mt-2 text-sm text-text-secondary">referencia documental oficial</div></div>
+        <div class="reveal terminal-card rounded-2xl p-6 text-center"><div class="text-4xl stat-glow font-display" data-count="8">8</div><div class="mt-2 text-xs uppercase tracking-[3px] text-text-muted">GB mínimos para Elastic</div><div class="mt-2 text-sm text-text-secondary">dependencia más pesada</div></div>
+        <div class="reveal terminal-card rounded-2xl p-6 text-center"><div class="text-4xl stat-glow font-display" data-count="3">3</div><div class="mt-2 text-xs uppercase tracking-[3px] text-text-muted">roles de conectores más usados</div><div class="mt-2 text-sm text-text-secondary">import, enrichment, stream</div></div>
+        <div class="reveal terminal-card rounded-2xl p-6 text-center"><div class="text-4xl stat-glow font-display" data-count="1">1</div><div class="mt-2 text-xs uppercase tracking-[3px] text-text-muted">grafo central</div><div class="mt-2 text-sm text-text-secondary">todo converge ahí</div></div>
+      </div>
+      <p class="reveal text-text-secondary leading-7">Solo viendo los requisitos y dependencias oficiales ya se entiende la jugada: esto consume recursos, necesita criterio de despliegue y recompensa con una capacidad de correlación que está muy por encima del CSV y ya.</p>
+    </div>
+  </section>
+
+  <section class="slide" data-slide="5">
+    <div class="gradient-mesh">
+      <div class="blob" style="width:380px;height:380px;top:-90px;right:-80px;background:var(--color-accent-1);opacity:.08"></div>
+      <div class="blob" style="width:220px;height:220px;bottom:-50px;left:-50px;background:var(--color-accent-2);opacity:.06"></div>
+    </div>
+    <div class="content">
+      <p class="reveal uppercase tracking-[5px] text-text-muted mb-4">cómo lo vamos a usar</p>
+      <h2 class="reveal font-display text-[clamp(2rem,4vw,3.1rem)] font-bold mb-8">Nuestro flujo operativo no acaba en recon. Empieza ahí.</h2>
+      <div class="grid grid-cols-2 gap-6">
+        <div class="reveal terminal-card rounded-2xl p-7">
+          <div class="terminal-line text-accent-1 font-display mb-3">SpiderFoot / Shodan / OSINT externo</div>
+          <p class="text-text-secondary leading-7">OpenCTI permite usar conectores de importación y enriquecimiento para traer datos externos y ampliar entidades ya conocidas, incluyendo integraciones de enrichment como Shodan según la tipología oficial de conectores.</p>
+        </div>
+        <div class="reveal terminal-card rounded-2xl p-7">
+          <div class="terminal-line text-accent-2 font-display mb-3">Graph + contexto + priorización</div>
+          <p class="text-text-secondary leading-7">La gracia no es almacenar IOC sueltos, sino relacionarlos con malware, campañas, actores, técnicas, informes y observables para contar una historia operativa y accionable.</p>
+        </div>
+        <div class="reveal terminal-card rounded-2xl p-7">
+          <div class="terminal-line text-accent-3 font-display mb-3">Casos internos</div>
+          <p class="text-text-secondary leading-7">Podemos usarlo para CTI, incident response, gestión de vulnerabilidades y compartición de inteligencia, que son precisamente casos de uso documentados por OpenCTI.</p>
+        </div>
+        <div class="reveal terminal-card rounded-2xl p-7">
+          <div class="terminal-line text-accent-1 font-display mb-3">De hallazgo a decisión</div>
+          <p class="text-text-secondary leading-7">Lo que aparezca expuesto, correlacionado y repetido entre fuentes deja de ser ruido y pasa a convertirse en prioridad real para hunting, hardening o respuesta.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" data-slide="6">
+    <div class="gradient-mesh">
+      <div class="blob" style="width:340px;height:340px;top:-80px;right:-60px;background:var(--color-accent-3);opacity:.07"></div>
+      <div class="blob" style="width:240px;height:240px;bottom:-40px;left:-30px;background:var(--color-accent-1);opacity:.05"></div>
+    </div>
+    <div class="content">
+      <h2 class="reveal font-display text-[clamp(1.9rem,4vw,3rem)] font-bold mb-8">Qué tipo de conectores encajan en la operación</h2>
+      <div class="grid grid-cols-3 gap-5">
+        <div class="reveal terminal-card rounded-2xl p-6"><h3 class="font-display text-lg mb-3 text-accent-1">EXTERNAL_IMPORT</h3><p class="text-sm leading-6 text-text-secondary">Sirven para traer datasets o fuentes remotas y convertirlas a STIX2 dentro de OpenCTI.</p></div>
+        <div class="reveal terminal-card rounded-2xl p-6"><h3 class="font-display text-lg mb-3 text-accent-2">INTERNAL_ENRICHMENT</h3><p class="text-sm leading-6 text-text-secondary">Escuchan nuevas entidades o peticiones del usuario para enriquecer datos existentes con fuentes externas.</p></div>
+        <div class="reveal terminal-card rounded-2xl p-6"><h3 class="font-display text-lg mb-3 text-accent-3">INTERNAL_IMPORT_FILE</h3><p class="text-sm leading-6 text-text-secondary">Procesan ficheros subidos por UI o API, incluyendo STIX, PDF, texto o HTML.</p></div>
+        <div class="reveal terminal-card rounded-2xl p-6"><h3 class="font-display text-lg mb-3 text-accent-1">INTERNAL_EXPORT_FILE</h3><p class="text-sm leading-6 text-text-secondary">Permiten sacar datos hacia formatos útiles para compartir, revisar o intercambiar inteligencia.</p></div>
+        <div class="reveal terminal-card rounded-2xl p-6"><h3 class="font-display text-lg mb-3 text-accent-2">STREAM</h3><p class="text-sm leading-6 text-text-secondary">Consumen eventos en tiempo real para reenviar inteligencia o activar automatizaciones aguas abajo.</p></div>
+        <div class="reveal terminal-card rounded-2xl p-6"><h3 class="font-display text-lg mb-3 text-accent-3">XTM Hub</h3><p class="text-sm leading-6 text-text-secondary">La librería de integraciones de Filigran centraliza el catálogo de conectores disponibles y su uso.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" data-slide="7">
+    <div class="gradient-mesh">
+      <div class="blob" style="width:300px;height:300px;top:-40px;right:-20px;background:var(--color-accent-2);opacity:.08"></div>
+      <div class="blob" style="width:260px;height:260px;bottom:-50px;left:-50px;background:var(--color-accent-1);opacity:.06"></div>
+    </div>
+    <div class="content">
+      <h2 class="reveal font-display text-[clamp(1.9rem,4vw,3rem)] font-bold mb-8">Pipeline brutal, contado simple</h2>
+      <div class="grid grid-cols-2 gap-8 items-center">
+        <div>
+          <div class="reveal terminal-card rounded-2xl p-6 mb-4"><div class="terminal-line font-display text-accent-1 mb-2">01 / ingesta</div><p class="text-text-secondary">Dominios, IPs, reports, TTPs, leaks y observables entran por UI, API o conectores.</p></div>
+          <div class="reveal terminal-card rounded-2xl p-6 mb-4"><div class="terminal-line font-display text-accent-2 mb-2">02 / cola y proceso</div><p class="text-text-secondary">RabbitMQ desacopla la carga y los workers procesan de forma asíncrona.</p></div>
+          <div class="reveal terminal-card rounded-2xl p-6"><div class="terminal-line font-display text-accent-3 mb-2">03 / contexto útil</div><p class="text-text-secondary">El resultado final es conocimiento enlazado, buscable y exportable, no simples indicadores muertos.</p></div>
+        </div>
+        <div class="reveal terminal-card rounded-2xl p-7">
+          <div class="bar-chart bar-init">
+            <div class="bar-col"><div class="bar bg-[linear-gradient(180deg,#00ff41,#008f28)]" data-height="78"></div><span class="text-sm text-text-secondary">ingesta</span></div>
+            <div class="bar-col"><div class="bar bg-[linear-gradient(180deg,#ffa500,#a46500)]" data-height="61"></div><span class="text-sm text-text-secondary">proceso</span></div>
+            <div class="bar-col"><div class="bar bg-[linear-gradient(180deg,#ff3b30,#8c1d18)]" data-height="87"></div><span class="text-sm text-text-secondary">correlación</span></div>
+            <div class="bar-col"><div class="bar bg-[linear-gradient(180deg,#00ff41,#ffa500)]" data-height="72"></div><span class="text-sm text-text-secondary">acción</span></div>
+          </div>
+          <p class="mt-6 text-sm leading-6 text-text-secondary">La gráfica no muestra cifras oficiales de volumen; ilustra la lógica operativa de cómo un stack CTI maduro va ganando valor cuanto más contexto acumula y correlaciona.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" data-slide="8">
+    <div class="gradient-mesh">
+      <div class="blob" style="width:340px;height:340px;top:-60px;right:-60px;background:var(--color-accent-1);opacity:.08"></div>
+      <div class="blob" style="width:220px;height:220px;bottom:-50px;left:-40px;background:var(--color-accent-3);opacity:.06"></div>
+    </div>
+    <div class="content">
+      <h2 class="reveal font-display text-[clamp(1.9rem,4vw,3rem)] font-bold mb-8">Por qué no cualquier empresa se mete en esto</h2>
+      <div class="grid grid-cols-2 gap-6">
+        <div class="reveal terminal-card rounded-2xl p-7">
+          <h3 class="font-display text-xl mb-4 text-accent-1">Porque exige stack</h3>
+          <p class="text-text-secondary leading-7">El despliegue recomendado ya implica varias piezas de infraestructura, escalado horizontal posible y dependencias con memoria y disco nada despreciables.</p>
+        </div>
+        <div class="reveal terminal-card rounded-2xl p-7">
+          <h3 class="font-display text-xl mb-4 text-accent-2">Porque exige disciplina</h3>
+          <p class="text-text-secondary leading-7">Sin taxonomía, sin fuentes claras y sin procesos de revisión, el grafo puede llenarse de ruido más rápido de lo que genera inteligencia útil.</p>
+        </div>
+        <div class="reveal terminal-card rounded-2xl p-7">
+          <h3 class="font-display text-xl mb-4 text-accent-3">Porque exige operación</h3>
+          <p class="text-text-secondary leading-7">Los workers, conectores y pipelines viven mejor cuando hay un equipo capaz de mantener ingestión, tuning y priorización de hallazgos.</p>
+        </div>
+        <div class="reveal terminal-card rounded-2xl p-7">
+          <h3 class="font-display text-xl mb-4 text-accent-1">Y precisamente por eso merece la pena</h3>
+          <p class="text-text-secondary leading-7">Cuando funciona, te permite pasar de ver hechos aislados a operar contexto, y eso cambia tanto la defensa como la inteligencia ofensiva.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" data-slide="9">
+    <div class="gradient-mesh">
+      <div class="blob" style="width:500px;height:500px;top:-120px;right:-90px;background:var(--color-accent-1);opacity:.14"></div>
+      <div class="blob" style="width:300px;height:300px;bottom:-70px;left:-30px;background:var(--color-accent-2);opacity:.10"></div>
+      <div class="blob" style="width:220px;height:220px;top:45%;left:18%;background:var(--color-accent-3);opacity:.08"></div>
+    </div>
+    <div class="scan"></div>
+    <div class="content text-center">
+      <div class="reveal text-[100px] mb-4 animate-[float_3.2s_ease-in-out_infinite]">🕷️</div>
+      <h2 class="reveal font-display text-[clamp(2.2rem,5vw,4.3rem)] font-extrabold text-glow mb-4">OPENCTI YA ESTÁ ARRIBA // DEFINITIVO</h2>
+      <p class="reveal text-[clamp(1rem,1.8vw,1.4rem)] text-text-secondary max-w-4xl mx-auto">Ahora toca alimentarlo con recon, enriquecimiento y criterio para convertir exposición externa en inteligencia operativa real.</p>
+      <p class="reveal mt-8 uppercase tracking-[5px] text-text-muted">Private by design. Not by policy.</p><p class="reveal mt-6 text-sm text-text-muted">Fuentes: documentación oficial de OpenCTI y guías de conectores de Filigran.</p>
+    </div>
+  </section>
+</div>
+<div class="nav-controls">
+  <button class="nav-btn" onclick="changeSlide(-1)">&#8249;</button>
+  <div class="slide-dots" id="dots"></div>
+  <button class="nav-btn" onclick="changeSlide(1)">&#8250;</button>
+  <span class="slide-counter" id="counter">1 / 9</span>
+</div>
+<script>
+let current = 1;
+const total = document.querySelectorAll('.slide').length;
+const dotsContainer = document.getElementById('dots');
+const counter = document.getElementById('counter');
+for (let i = 1; i <= total; i++) { const dot = document.createElement('div'); dot.className = 'dot' + (i === 1 ? ' active' : ''); dot.onclick = () => goToSlide(i); dotsContainer.appendChild(dot); }
+function goToSlide(n){ const prev=document.querySelector('.slide.active'); const next=document.querySelector(`.slide[data-slide="${n}"]`); if(prev) prev.classList.remove('active'); if(next){ next.classList.add('active'); animateSlide(next);} current=n; updateNav(); }
+function changeSlide(dir){ let next=current+dir; if(next<1) next=total; if(next>total) next=1; goToSlide(next); }
+function updateNav(){ document.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('active', i+1===current)); counter.textContent=current+' / '+total; }
+document.addEventListener('keydown', (e)=>{ if(e.key==='ArrowRight'||e.key===' '){ e.preventDefault(); changeSlide(1);} if(e.key==='ArrowLeft'){ e.preventDefault(); changeSlide(-1);} });
+let touchStartX=0; document.addEventListener('touchstart',(e)=>{ touchStartX=e.touches[0].clientX; }); document.addEventListener('touchend',(e)=>{ const diff=touchStartX-e.changedTouches[0].clientX; if(Math.abs(diff)>50) changeSlide(diff>0?1:-1); });
+function animateSlide(slide){ slide.querySelectorAll('.reveal').forEach((el,i)=>{ el.style.transition='none'; el.style.opacity='0'; el.style.transform='translateY(18px)'; el.offsetHeight; const delay=i*0.08; el.style.transition=`opacity .35s ease ${delay}s, transform .35s ease ${delay}s`; el.style.opacity='1'; el.style.transform='translateY(0px)'; }); animateSlideEffects(slide); }
+function animateSlideEffects(slide){ slide.querySelectorAll('[data-count]:not(.counted)').forEach(el=>{ el.classList.add('counted'); const target=parseInt(el.dataset.count); let cur=0; const step=target/36; const timer=setInterval(()=>{ cur+=step; if(cur>=target){ cur=target; clearInterval(timer);} el.textContent=Math.round(cur).toLocaleString(); }, 28); }); slide.querySelectorAll('.bar-chart:not(.done)').forEach(chart=>{ chart.classList.add('done'); chart.querySelectorAll('.bar').forEach((bar,i)=>{ const h=bar.dataset.height; bar.style.height='0%'; bar.style.transition=`height .55s ease ${i*0.08}s`; bar.offsetHeight; bar.style.height=h+'%'; }); }); }
+document.addEventListener('mousemove',(e)=>{ const spotlight=document.querySelector('.mouse-spotlight'); if(spotlight){ const rgb=getComputedStyle(document.documentElement).getPropertyValue('--glow-color-rgb').trim()||'0,255,65'; spotlight.style.background=`radial-gradient(520px circle at ${e.clientX}px ${e.clientY}px, rgba(${rgb},0.05), transparent 42%)`; } });
+try { animateSlide(document.querySelector('.slide.active')); } catch(e) {}
+</script>
+</body>
+</html>
